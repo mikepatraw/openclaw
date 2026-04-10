@@ -13,8 +13,11 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function resolveStoredDreaming(config: OpenClawConfig): Record<string, unknown> {
-  const entry = asRecord(config.plugins?.entries?.["memory-core"]);
+function resolveStoredDreaming(
+  config: OpenClawConfig,
+  pluginId = "memory-core",
+): Record<string, unknown> {
+  const entry = asRecord(config.plugins?.entries?.[pluginId]);
   const pluginConfig = asRecord(entry?.config);
   return asRecord(pluginConfig?.dreaming) ?? {};
 }
@@ -119,6 +122,35 @@ describe("memory-core /dreaming command", () => {
     expect(result.text).toContain("Dreaming disabled.");
   });
 
+  it("persists dreaming config under the selected memory slot owner", async () => {
+    const { command, runtime, getRuntimeConfig } = createHarness({
+      plugins: {
+        slots: {
+          memory: "memory-lancedb",
+        },
+        entries: {
+          "memory-lancedb": {
+            config: {
+              dreaming: {
+                frequency: "5 1 * * *",
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const result = await command.handler(createCommandContext("on"));
+
+    expect(runtime.config.writeConfigFile).toHaveBeenCalledTimes(1);
+    expect(resolveStoredDreaming(getRuntimeConfig(), "memory-lancedb")).toMatchObject({
+      enabled: true,
+      frequency: "5 1 * * *",
+    });
+    expect(resolveStoredDreaming(getRuntimeConfig(), "memory-core")).toEqual({});
+    expect(result.text).toContain("Dreaming enabled.");
+  });
+
   it("blocks unscoped gateway callers from persisting dreaming config", async () => {
     const { command, runtime } = createHarness();
 
@@ -187,6 +219,41 @@ describe("memory-core /dreaming command", () => {
     expect(result.text).toContain("- enabled: off (America/Los_Angeles)");
     expect(result.text).toContain("- sweep cadence: 15 */8 * * *");
     expect(result.text).toContain("- promotion policy: score>=0.8, recalls>=3, uniqueQueries>=3");
+    expect(runtime.config.writeConfigFile).not.toHaveBeenCalled();
+  });
+
+  it("reads status from the selected memory slot owner", async () => {
+    const { command, runtime } = createHarness({
+      plugins: {
+        slots: {
+          memory: "memory-lancedb",
+        },
+        entries: {
+          "memory-lancedb": {
+            config: {
+              dreaming: {
+                enabled: true,
+                frequency: "15 */8 * * *",
+                timezone: "America/Los_Angeles",
+                phases: {
+                  deep: {
+                    minScore: 0.6,
+                    minRecallCount: 2,
+                    minUniqueQueries: 4,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const result = await command.handler(createCommandContext("status"));
+
+    expect(result.text).toContain("- enabled: on (America/Los_Angeles)");
+    expect(result.text).toContain("- sweep cadence: 15 */8 * * *");
+    expect(result.text).toContain("- promotion policy: score>=0.6, recalls>=2, uniqueQueries>=4");
     expect(runtime.config.writeConfigFile).not.toHaveBeenCalled();
   });
 
