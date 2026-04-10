@@ -403,6 +403,7 @@ export const __testing = {
   buildQaRuntimeEnv,
   fetchLocalGatewayHealth,
   isRetryableGatewayCallError,
+  isRetryableRpcStartupError,
   isRetryableGatewayStartupError,
   readQaLiveProviderConfigOverrides,
   resolveQaLiveAnthropicSetupToken,
@@ -773,7 +774,10 @@ async function waitForGatewayReady(params: {
 function isRetryableRpcStartupError(error: unknown) {
   const details = formatErrorMessage(error);
   return (
+    details.includes("gateway timeout after") ||
     details.includes("handshake timeout") ||
+    details.includes("gateway token mismatch") ||
+    details.includes("token mismatch") ||
     details.includes("gateway closed (1000") ||
     details.includes("gateway closed (1006") ||
     details.includes("gateway closed (1012)")
@@ -928,6 +932,7 @@ export async function startQaGatewayChild(params: {
   let wsUrl = "";
   let child: ReturnType<typeof spawn> | null = null;
   let cfg: ReturnType<typeof buildQaGatewayConfig> | null = null;
+  let rpcClient: Awaited<ReturnType<typeof startQaGatewayRpcClient>> | null = null;
 
   try {
     for (let attempt = 1; attempt <= QA_GATEWAY_CHILD_STARTUP_MAX_ATTEMPTS; attempt += 1) {
@@ -977,55 +982,68 @@ export async function startQaGatewayChild(params: {
           child: attemptChild,
           timeoutMs: 120_000,
         });
+        const attemptRpcClient = await startQaGatewayRpcClient({
+          wsUrl,
+          token: gatewayToken,
+          logs,
+        });
+        try {
+          let rpcReady = false;
+          let lastRpcStartupError: unknown = null;
+          for (let rpcAttempt = 1; rpcAttempt <= 4; rpcAttempt += 1) {
+            try {
+              await attemptRpcClient.request("config.get", {}, { timeoutMs: 10_000 });
+              rpcReady = true;
+              break;
+            } catch (error) {
+              lastRpcStartupError = error;
+              if (rpcAttempt >= 4 || !isRetryableRpcStartupError(error)) {
+                throw error;
+              }
+              await sleep(500 * rpcAttempt);
+              await waitForGatewayReady({
+                baseUrl,
+                logs,
+                child: attemptChild,
+                timeoutMs: 15_000,
+              });
+            }
+          }
+          if (!rpcReady) {
+            throw lastRpcStartupError ?? new Error("qa gateway rpc client failed to start");
+          }
+        } catch (error) {
+          await attemptRpcClient.stop().catch(() => {});
+          throw error;
+        }
+        rpcClient = attemptRpcClient;
         break;
       } catch (error) {
         const details = formatErrorMessage(error);
         const retryable =
           attempt < QA_GATEWAY_CHILD_STARTUP_MAX_ATTEMPTS &&
-          isRetryableGatewayStartupError(`${details}\n${logs()}`);
+          (isRetryableGatewayStartupError(`${details}\n${logs()}`) ||
+            isRetryableRpcStartupError(error));
+        if (rpcClient) {
+          await rpcClient.stop().catch(() => {});
+          rpcClient = null;
+        }
         await terminateChildProcess(attemptChild, 1_500);
         child = null;
         if (!retryable) {
           throw error;
         }
         stdoutLog.write(
-          `[qa-lab] gateway child startup attempt ${attempt}/${QA_GATEWAY_CHILD_STARTUP_MAX_ATTEMPTS} hit a transient bind race on port ${gatewayPort}; retrying with a new port\n`,
+          `[qa-lab] gateway child startup attempt ${attempt}/${QA_GATEWAY_CHILD_STARTUP_MAX_ATTEMPTS} hit a transient startup race on port ${gatewayPort}; retrying with a new port\n`,
         );
       }
     }
 
-    if (!child || !cfg || !baseUrl || !wsUrl) {
+    if (!child || !cfg || !baseUrl || !wsUrl || !rpcClient) {
       throw new Error("qa gateway child failed to start");
     }
     const runningChild = child;
-
-    let rpcClient;
-    let lastRpcError: unknown = null;
-    for (let attempt = 1; attempt <= 4; attempt += 1) {
-      try {
-        rpcClient = await startQaGatewayRpcClient({
-          wsUrl,
-          token: gatewayToken,
-          logs,
-        });
-        break;
-      } catch (error) {
-        lastRpcError = error;
-        if (attempt >= 4 || !isRetryableRpcStartupError(error)) {
-          throw error;
-        }
-        await sleep(500 * attempt);
-        await waitForGatewayReady({
-          baseUrl,
-          logs,
-          child: runningChild,
-          timeoutMs: 15_000,
-        });
-      }
-    }
-    if (!rpcClient) {
-      throw lastRpcError ?? new Error("qa gateway rpc client failed to start");
-    }
+    const runningRpcClient = rpcClient;
 
     return {
       cfg,
@@ -1053,7 +1071,7 @@ export async function startQaGatewayChild(params: {
         let lastDetails = "";
         for (let attempt = 1; attempt <= 3; attempt += 1) {
           try {
-            return await rpcClient.request(method, rpcParams, {
+            return await runningRpcClient.request(method, rpcParams, {
               ...opts,
               timeoutMs,
             });
@@ -1074,7 +1092,7 @@ export async function startQaGatewayChild(params: {
         throw new Error(`${lastDetails}\nGateway logs:\n${logs()}`);
       },
       async stop(opts?: { keepTemp?: boolean; preserveToDir?: string }) {
-        await rpcClient.stop().catch(() => {});
+        await runningRpcClient.stop().catch(() => {});
         await terminateChildProcess(runningChild);
         await closeWriteStream(stdoutLog);
         await closeWriteStream(stderrLog);

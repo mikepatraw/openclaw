@@ -363,6 +363,15 @@ describe("buildQaRuntimeEnv", () => {
     );
   });
 
+  it("treats startup token mismatches as retryable rpc startup errors", () => {
+    expect(
+      __testing.isRetryableRpcStartupError(
+        "unauthorized: gateway token mismatch (set gateway.remote.token to match gateway.auth.token)",
+      ),
+    ).toBe(true);
+    expect(__testing.isRetryableRpcStartupError("permission denied")).toBe(false);
+  });
+
   it("probes gateway health with a one-shot HEAD request through the SSRF guard", async () => {
     const release = vi.fn(async () => {});
     fetchWithSsrFGuardMock.mockResolvedValue({
