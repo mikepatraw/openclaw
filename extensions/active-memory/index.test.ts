@@ -946,6 +946,38 @@ describe("active-memory plugin", () => {
     expect(infoLines.some((line: string) => line.includes(" cached "))).toBe(false);
   });
 
+  it("ignores late subagent payloads once the active-memory timeout signal has fired", async () => {
+    api.pluginConfig = {
+      agents: ["main"],
+      timeoutMs: 250,
+      logging: true,
+    };
+    await plugin.register(api as unknown as OpenClawPluginApi);
+    runEmbeddedPiAgent.mockImplementationOnce(async (params: { timeoutMs?: number }) => {
+      await new Promise((resolve) => setTimeout(resolve, (params.timeoutMs ?? 0) + 25));
+      return {
+        payloads: [{ text: "late timeout payload that should never become memory context" }],
+        meta: { aborted: true },
+      };
+    });
+
+    const result = await hooks.before_prompt_build(
+      { prompt: "what wings should i order? late payload timeout", messages: [] },
+      {
+        agentId: "main",
+        trigger: "user",
+        sessionKey: "agent:main:late-timeout-payload",
+        messageProvider: "webchat",
+      },
+    );
+
+    expect(result).toBeUndefined();
+    const infoLines = vi
+      .mocked(api.logger.info)
+      .mock.calls.map((call: unknown[]) => String(call[0]));
+    expect(infoLines.some((line: string) => line.includes("status=timeout"))).toBe(true);
+  });
+
   it("uses a canonical agent session key when only sessionId is available", async () => {
     hoisted.sessionStore["agent:main:telegram:direct:12345"] = {
       sessionId: "session-a",

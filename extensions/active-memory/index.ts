@@ -1253,6 +1253,18 @@ async function runRecallSubagent(params: {
       silentExpected: true,
       abortSignal: params.abortSignal,
     });
+    if (params.abortSignal?.aborted) {
+      const reason = params.abortSignal.reason;
+      if (reason instanceof Error) {
+        throw reason;
+      }
+      const abortErr =
+        reason !== undefined
+          ? new Error("Operation aborted", { cause: reason })
+          : new Error("Operation aborted");
+      abortErr.name = "AbortError";
+      throw abortErr;
+    }
     const rawReply = (result.payloads ?? [])
       .map((payload) => payload.text?.trim() ?? "")
       .filter(Boolean)
