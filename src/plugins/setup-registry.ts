@@ -10,6 +10,7 @@ import { getCachedPluginJitiLoader, type PluginJitiLoaderCache } from "./jiti-lo
 import { loadPluginManifestRegistry } from "./manifest-registry.js";
 import { resolvePluginCacheInputs } from "./roots.js";
 import type { PluginRuntime } from "./runtime/types.js";
+import { listSetupCliBackendIds, listSetupProviderIds } from "./setup-descriptors.js";
 import type {
   CliBackendPlugin,
   OpenClawPluginModule,
@@ -67,11 +68,13 @@ const NOOP_LOGGER: PluginLogger = {
 const jitiLoaders: PluginJitiLoaderCache = new Map();
 const setupRegistryCache = new Map<string, PluginSetupRegistry>();
 const setupProviderCache = new Map<string, ProviderPlugin | null>();
+const setupCliBackendCache = new Map<string, SetupCliBackendEntry | null>();
 
 export function clearPluginSetupRegistryCache(): void {
   jitiLoaders.clear();
   setupRegistryCache.clear();
   setupProviderCache.clear();
+  setupCliBackendCache.clear();
 }
 
 function getJiti(modulePath: string) {
@@ -105,6 +108,17 @@ function buildSetupProviderCacheKey(params: {
 }): string {
   return JSON.stringify({
     provider: normalizeProviderId(params.provider),
+    registry: buildSetupRegistryCacheKey(params),
+  });
+}
+
+function buildSetupCliBackendCacheKey(params: {
+  backend: string;
+  workspaceDir?: string;
+  env?: NodeJS.ProcessEnv;
+}): string {
+  return JSON.stringify({
+    backend: normalizeProviderId(params.backend),
     registry: buildSetupRegistryCacheKey(params),
   });
 }
@@ -216,6 +230,22 @@ function matchesProvider(provider: ProviderPlugin, providerId: string): boolean 
   );
 }
 
+function loadSetupManifestRegistry(params?: { workspaceDir?: string; env?: NodeJS.ProcessEnv }) {
+  const env = params?.env ?? process.env;
+  const discovery = discoverOpenClawPlugins({
+    workspaceDir: params?.workspaceDir,
+    env,
+    cache: true,
+  });
+  return loadPluginManifestRegistry({
+    workspaceDir: params?.workspaceDir,
+    env,
+    cache: true,
+    candidates: discovery.candidates,
+    diagnostics: discovery.diagnostics,
+  });
+}
+
 export function resolvePluginSetupRegistry(params?: {
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
@@ -253,17 +283,9 @@ export function resolvePluginSetupRegistry(params?: {
   const providerKeys = new Set<string>();
   const cliBackendKeys = new Set<string>();
 
-  const discovery = discoverOpenClawPlugins({
+  const manifestRegistry = loadSetupManifestRegistry({
     workspaceDir: params?.workspaceDir,
     env,
-    cache: true,
-  });
-  const manifestRegistry = loadPluginManifestRegistry({
-    workspaceDir: params?.workspaceDir,
-    env,
-    cache: true,
-    candidates: discovery.candidates,
-    diagnostics: discovery.diagnostics,
   });
 
   for (const record of manifestRegistry.plugins) {
@@ -372,20 +394,14 @@ export function resolvePluginSetupProvider(params: {
 
   const env = params.env ?? process.env;
   const normalizedProvider = normalizeProviderId(params.provider);
-  const discovery = discoverOpenClawPlugins({
+  const manifestRegistry = loadSetupManifestRegistry({
     workspaceDir: params.workspaceDir,
     env,
-    cache: true,
-  });
-  const manifestRegistry = loadPluginManifestRegistry({
-    workspaceDir: params.workspaceDir,
-    env,
-    cache: true,
-    candidates: discovery.candidates,
-    diagnostics: discovery.diagnostics,
   });
   const record = manifestRegistry.plugins.find((entry) =>
-    entry.providers.some((providerId) => normalizeProviderId(providerId) === normalizedProvider),
+    listSetupProviderIds(entry).some(
+      (providerId) => normalizeProviderId(providerId) === normalizedProvider,
+    ),
   );
   if (!record) {
     setupProviderCache.set(cacheKey, null);
@@ -465,36 +481,34 @@ export function resolvePluginSetupCliBackend(params: {
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
 }): SetupCliBackendEntry | undefined {
-  const normalized = normalizeProviderId(params.backend);
-  const direct = resolvePluginSetupRegistry(params).cliBackends.find(
-    (entry) => normalizeProviderId(entry.backend.id) === normalized,
-  );
-  if (direct) {
-    return direct;
+  const cacheKey = buildSetupCliBackendCacheKey(params);
+  if (setupCliBackendCache.has(cacheKey)) {
+    return setupCliBackendCache.get(cacheKey) ?? undefined;
   }
 
+  const normalized = normalizeProviderId(params.backend);
+
   const env = params.env ?? process.env;
-  const discovery = discoverOpenClawPlugins({
+  // Narrow setup lookup from manifest-owned descriptors before executing any
+  // plugin setup module. This avoids booting every setup-api just to find one
+  // backend owner.
+  const manifestRegistry = loadSetupManifestRegistry({
     workspaceDir: params.workspaceDir,
     env,
-    cache: true,
-  });
-  const manifestRegistry = loadPluginManifestRegistry({
-    workspaceDir: params.workspaceDir,
-    env,
-    cache: true,
-    candidates: discovery.candidates,
-    diagnostics: discovery.diagnostics,
   });
   const record = manifestRegistry.plugins.find((entry) =>
-    entry.cliBackends.some((backendId) => normalizeProviderId(backendId) === normalized),
+    listSetupCliBackendIds(entry).some(
+      (backendId) => normalizeProviderId(backendId) === normalized,
+    ),
   );
   if (!record) {
+    setupCliBackendCache.set(cacheKey, null);
     return undefined;
   }
 
   const setupSource = record.setupSource ?? resolveSetupApiPath(record.rootDir);
   if (!setupSource) {
+    setupCliBackendCache.set(cacheKey, null);
     return undefined;
   }
 
@@ -502,13 +516,16 @@ export function resolvePluginSetupCliBackend(params: {
   try {
     mod = getJiti(setupSource)(setupSource) as OpenClawPluginModule;
   } catch {
+    setupCliBackendCache.set(cacheKey, null);
     return undefined;
   }
   const resolved = resolveRegister((mod as { default?: OpenClawPluginModule }).default ?? mod);
   if (!resolved.register) {
+    setupCliBackendCache.set(cacheKey, null);
     return undefined;
   }
   if (resolved.definition?.id && resolved.definition.id !== record.id) {
+    setupCliBackendCache.set(cacheKey, null);
     return undefined;
   }
 
@@ -546,13 +563,17 @@ export function resolvePluginSetupCliBackend(params: {
   try {
     const result = resolved.register(api);
     if (result && typeof result.then === "function") {
+      setupCliBackendCache.set(cacheKey, null);
       return undefined;
     }
   } catch {
+    setupCliBackendCache.set(cacheKey, null);
     return undefined;
   }
 
-  return matchedBackend ? { pluginId: record.id, backend: matchedBackend } : undefined;
+  const resolvedEntry = matchedBackend ? { pluginId: record.id, backend: matchedBackend } : null;
+  setupCliBackendCache.set(cacheKey, resolvedEntry);
+  return resolvedEntry ?? undefined;
 }
 
 export function runPluginSetupConfigMigrations(params: {
