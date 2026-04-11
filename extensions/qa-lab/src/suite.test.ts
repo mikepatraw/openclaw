@@ -39,6 +39,18 @@ describe("qa suite failure reply handling", () => {
     }
   });
 
+  it("keeps programmatic suite output dirs within the repo root", () => {
+    expect(
+      qaSuiteTesting.resolveQaSuiteOutputDir(
+        "/tmp/openclaw-repo",
+        "/tmp/openclaw-repo/.artifacts/qa-e2e/custom",
+      ),
+    ).toBe("/tmp/openclaw-repo/.artifacts/qa-e2e/custom");
+    expect(() =>
+      qaSuiteTesting.resolveQaSuiteOutputDir("/tmp/openclaw-repo", "/tmp/outside"),
+    ).toThrow("QA suite outputDir must stay within the repo root.");
+  });
+
   it("maps suite work with bounded concurrency while preserving order", async () => {
     let active = 0;
     let maxActive = 0;

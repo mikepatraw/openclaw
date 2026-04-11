@@ -85,6 +85,26 @@ const QA_LIVE_CLI_BACKEND_AUTH_MODE_ENV = "OPENCLAW_LIVE_CLI_BACKEND_AUTH_MODE";
 export type QaCliBackendAuthMode = "auto" | "api-key" | "subscription";
 const QA_GATEWAY_CHILD_STARTUP_MAX_ATTEMPTS = 5;
 const QA_GATEWAY_CHILD_EXIT_TIMEOUT_MS = 5_000;
+const QA_GATEWAY_DEBUG_SECRET_ENV_VARS = Object.freeze([
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_OAUTH_TOKEN",
+  "AWS_ACCESS_KEY_ID",
+  "AWS_BEARER_TOKEN_BEDROCK",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_SESSION_TOKEN",
+  "GEMINI_API_KEY",
+  "GEMINI_API_KEYS",
+  "GOOGLE_API_KEY",
+  "MISTRAL_API_KEY",
+  "OPENAI_API_KEY",
+  "OPENAI_API_KEYS",
+  "OPENCLAW_GATEWAY_TOKEN",
+  "OPENCLAW_LIVE_ANTHROPIC_KEY",
+  "OPENCLAW_LIVE_ANTHROPIC_KEYS",
+  "OPENCLAW_LIVE_GEMINI_KEY",
+  "OPENCLAW_LIVE_OPENAI_KEY",
+  "VOYAGE_API_KEY",
+]);
 
 async function getFreePort() {
   return await new Promise<number>((resolve, reject) => {
@@ -107,24 +127,78 @@ async function closeWriteStream(stream: WriteStream) {
   });
 }
 
+function redactQaGatewayDebugText(text: string) {
+  let redacted = text;
+  for (const envVar of QA_GATEWAY_DEBUG_SECRET_ENV_VARS) {
+    const escapedEnvVar = envVar.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    redacted = redacted.replace(
+      new RegExp(`\\b(${escapedEnvVar})(\\s*[=:]\\s*)([^\\s"';,]+|"[^"]*"|'[^']*')`, "g"),
+      `$1$2<redacted>`,
+    );
+    redacted = redacted.replace(
+      new RegExp(`("${escapedEnvVar}"\\s*:\\s*)"[^"]*"`, "g"),
+      `$1"<redacted>"`,
+    );
+  }
+  return redacted
+    .replaceAll(/\bsk-ant-oat01-[A-Za-z0-9_-]+\b/g, "<redacted>")
+    .replaceAll(/\bBearer\s+[A-Za-z0-9._-]{12,}\b/gi, "Bearer <redacted>")
+    .replaceAll(/([?#&]token=)[^&\s]+/gi, "$1<redacted>");
+}
+
+async function writeSanitizedQaGatewayDebugLog(params: { sourcePath: string; targetPath: string }) {
+  const contents = await fs.readFile(params.sourcePath, "utf8").catch((error) => {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return "";
+    }
+    throw error;
+  });
+  await fs.writeFile(params.targetPath, redactQaGatewayDebugText(contents), "utf8");
+}
+
+function assertQaArtifactDirWithinRepo(repoRoot: string, artifactDir: string) {
+  const resolvedArtifactDir = path.resolve(artifactDir);
+  const relative = path.relative(repoRoot, resolvedArtifactDir);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error("QA gateway artifact directory must stay within the repo root.");
+  }
+  return resolvedArtifactDir;
+}
+
+async function cleanupQaGatewayTempRoots(params: {
+  tempRoot: string;
+  stagedBundledPluginsRoot?: string | null;
+}) {
+  await fs.rm(params.tempRoot, { recursive: true, force: true }).catch(() => {});
+  if (params.stagedBundledPluginsRoot) {
+    await fs.rm(params.stagedBundledPluginsRoot, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 async function preserveQaGatewayDebugArtifacts(params: {
   preserveToDir: string;
   stdoutLogPath: string;
   stderrLogPath: string;
   tempRoot: string;
+  repoRoot?: string;
 }) {
-  await fs.rm(params.preserveToDir, { recursive: true, force: true });
-  await fs.mkdir(params.preserveToDir, { recursive: true, mode: 0o700 });
+  const preserveToDir = params.repoRoot
+    ? assertQaArtifactDirWithinRepo(params.repoRoot, params.preserveToDir)
+    : params.preserveToDir;
+  await fs.rm(preserveToDir, { recursive: true, force: true });
+  await fs.mkdir(preserveToDir, { recursive: true, mode: 0o700 });
   await Promise.all([
-    fs.cp(params.stdoutLogPath, path.join(params.preserveToDir, "gateway.stdout.log"), {
-      force: true,
+    writeSanitizedQaGatewayDebugLog({
+      sourcePath: params.stdoutLogPath,
+      targetPath: path.join(preserveToDir, "gateway.stdout.log"),
     }),
-    fs.cp(params.stderrLogPath, path.join(params.preserveToDir, "gateway.stderr.log"), {
-      force: true,
+    writeSanitizedQaGatewayDebugLog({
+      sourcePath: params.stderrLogPath,
+      targetPath: path.join(preserveToDir, "gateway.stderr.log"),
     }),
   ]);
   await fs.writeFile(
-    path.join(params.preserveToDir, "README.txt"),
+    path.join(preserveToDir, "README.txt"),
     [
       "Only sanitized gateway debug artifacts are preserved here.",
       "The full QA gateway runtime was not copied because it may contain credentials or auth tokens.",
@@ -428,12 +502,15 @@ async function fetchLocalGatewayHealth(params: {
 }
 
 export const __testing = {
+  assertQaArtifactDirWithinRepo,
   buildQaRuntimeEnv,
+  cleanupQaGatewayTempRoots,
   fetchLocalGatewayHealth,
   isRetryableGatewayCallError,
   isRetryableRpcStartupError,
   isRetryableGatewayStartupError,
   preserveQaGatewayDebugArtifacts,
+  redactQaGatewayDebugText,
   readQaLiveProviderConfigOverrides,
   resolveQaLiveAnthropicSetupToken,
   stageQaLiveAnthropicSetupToken,
@@ -1131,27 +1208,37 @@ export async function startQaGatewayChild(params: {
             stdoutLogPath,
             stderrLogPath,
             tempRoot,
+            repoRoot: params.repoRoot,
           });
         }
         if (!(opts?.keepTemp ?? keepTemp)) {
-          await fs.rm(tempRoot, { recursive: true, force: true });
-          if (stagedBundledPluginsRoot) {
-            await fs.rm(stagedBundledPluginsRoot, { recursive: true, force: true });
-          }
+          await cleanupQaGatewayTempRoots({
+            tempRoot,
+            stagedBundledPluginsRoot,
+          });
         }
       },
     };
   } catch (error) {
+    await rpcClient?.stop().catch(() => {});
     if (child) {
       await terminateChildProcess(child, 1_500);
     }
     await closeWriteStream(stdoutLog);
     await closeWriteStream(stderrLog);
-    if (!keepTemp && stagedBundledPluginsRoot) {
-      await fs.rm(stagedBundledPluginsRoot, { recursive: true, force: true }).catch(() => {});
+    if (!keepTemp) {
+      await cleanupQaGatewayTempRoots({
+        tempRoot,
+        stagedBundledPluginsRoot,
+      });
     }
-    throw new Error(appendQaGatewayTempRoot(formatErrorMessage(error), tempRoot), {
-      cause: error,
-    });
+    throw new Error(
+      keepTemp
+        ? appendQaGatewayTempRoot(formatErrorMessage(error), tempRoot)
+        : formatErrorMessage(error),
+      {
+        cause: error,
+      },
+    );
   }
 }

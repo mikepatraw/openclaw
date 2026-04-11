@@ -405,40 +405,73 @@ describe("buildQaRuntimeEnv", () => {
 
   it("preserves only sanitized gateway debug artifacts", async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), "qa-gateway-preserve-src-"));
-    const preserveToDir = await mkdtemp(path.join(os.tmpdir(), "qa-gateway-preserve-out-"));
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "qa-gateway-preserve-repo-"));
     cleanups.push(async () => {
       await rm(tempRoot, { recursive: true, force: true });
-      await rm(preserveToDir, { recursive: true, force: true });
+      await rm(repoRoot, { recursive: true, force: true });
     });
 
     const stdoutLogPath = path.join(tempRoot, "gateway.stdout.log");
     const stderrLogPath = path.join(tempRoot, "gateway.stderr.log");
-    await writeFile(stdoutLogPath, "stdout", "utf8");
-    await writeFile(stderrLogPath, "stderr", "utf8");
+    const artifactDir = path.join(repoRoot, ".artifacts", "qa-e2e", "gateway-runtime");
+    await mkdir(path.dirname(artifactDir), { recursive: true });
+    await writeFile(
+      stdoutLogPath,
+      'OPENCLAW_GATEWAY_TOKEN=qa-suite-token\nOPENAI_API_KEY="openai-live"\nurl=http://127.0.0.1:18789/#token=abc123',
+      "utf8",
+    );
+    await writeFile(stderrLogPath, "Authorization: Bearer secret-token-123456", "utf8");
     await mkdir(path.join(tempRoot, "state"), { recursive: true });
     await writeFile(path.join(tempRoot, "state", "secret.txt"), "do-not-copy", "utf8");
 
     await __testing.preserveQaGatewayDebugArtifacts({
-      preserveToDir,
+      preserveToDir: artifactDir,
       stdoutLogPath,
       stderrLogPath,
       tempRoot,
+      repoRoot,
     });
 
-    expect((await readdir(preserveToDir)).toSorted()).toEqual([
+    expect((await readdir(artifactDir)).toSorted()).toEqual([
       "README.txt",
       "gateway.stderr.log",
       "gateway.stdout.log",
     ]);
-    await expect(readFile(path.join(preserveToDir, "gateway.stdout.log"), "utf8")).resolves.toBe(
-      "stdout",
+    await expect(readFile(path.join(artifactDir, "gateway.stdout.log"), "utf8")).resolves.toBe(
+      "OPENCLAW_GATEWAY_TOKEN=<redacted>\nOPENAI_API_KEY=<redacted>\nurl=http://127.0.0.1:18789/#token=<redacted>",
     );
-    await expect(readFile(path.join(preserveToDir, "gateway.stderr.log"), "utf8")).resolves.toBe(
-      "stderr",
+    await expect(readFile(path.join(artifactDir, "gateway.stderr.log"), "utf8")).resolves.toBe(
+      "Authorization: Bearer <redacted>",
     );
-    await expect(readFile(path.join(preserveToDir, "README.txt"), "utf8")).resolves.toContain(
+    await expect(readFile(path.join(artifactDir, "README.txt"), "utf8")).resolves.toContain(
       "was not copied because it may contain credentials or auth tokens",
     );
+  });
+
+  it("rejects preserved gateway artifacts outside the repo root", async () => {
+    expect(() =>
+      __testing.assertQaArtifactDirWithinRepo("/tmp/openclaw-repo", "/tmp/outside"),
+    ).toThrow("QA gateway artifact directory must stay within the repo root.");
+  });
+
+  it("cleans startup temp roots when they are not preserved", async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "qa-gateway-cleanup-src-"));
+    const stagedRoot = await mkdtemp(path.join(os.tmpdir(), "qa-gateway-cleanup-stage-"));
+    cleanups.push(async () => {
+      await rm(tempRoot, { recursive: true, force: true });
+      await rm(stagedRoot, { recursive: true, force: true });
+    });
+
+    await writeFile(path.join(tempRoot, "openclaw.json"), "{}", "utf8");
+    await writeFile(path.join(stagedRoot, "marker.txt"), "x", "utf8");
+
+    await __testing.cleanupQaGatewayTempRoots({
+      tempRoot,
+      stagedBundledPluginsRoot: stagedRoot,
+    });
+
+    await expect(lstat(tempRoot)).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(lstat(stagedRoot)).rejects.toMatchObject({ code: "ENOENT" });
   });
 });
 
