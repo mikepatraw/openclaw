@@ -314,6 +314,65 @@ function resolveCanonicalSessionKeyFromSessionId(params: {
   }
 }
 
+function normalizeOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function resolveRecallRunChannelContext(params: {
+  api: OpenClawPluginApi;
+  agentId: string;
+  sessionKey?: string;
+  sessionId?: string;
+  messageProvider?: string;
+  channelId?: string;
+}): {
+  messageChannel?: string;
+  messageProvider?: string;
+} {
+  const explicitChannel = normalizeOptionalString(params.channelId);
+  const explicitProvider = normalizeOptionalString(params.messageProvider);
+  const resolvedSessionKey =
+    normalizeOptionalString(params.sessionKey) ??
+    resolveCanonicalSessionKeyFromSessionId({
+      api: params.api,
+      agentId: params.agentId,
+      sessionId: params.sessionId,
+    });
+  if (!resolvedSessionKey) {
+    return {
+      messageChannel: explicitChannel ?? explicitProvider,
+      messageProvider: explicitProvider ?? explicitChannel,
+    };
+  }
+
+  try {
+    const storePath = params.api.runtime.agent.session.resolveStorePath(
+      params.api.config.session?.store,
+      {
+        agentId: params.agentId,
+      },
+    );
+    const store = params.api.runtime.agent.session.loadSessionStore(storePath);
+    const sessionEntry = resolveSessionStoreEntry({
+      store,
+      sessionKey: resolvedSessionKey,
+    }).existing;
+    const entryChannel =
+      normalizeOptionalString(sessionEntry?.lastChannel) ??
+      normalizeOptionalString(sessionEntry?.channel) ??
+      normalizeOptionalString(sessionEntry?.origin?.provider);
+    return {
+      messageChannel: explicitChannel ?? entryChannel ?? explicitProvider,
+      messageProvider: explicitProvider ?? explicitChannel ?? entryChannel,
+    };
+  } catch {
+    return {
+      messageChannel: explicitChannel ?? explicitProvider,
+      messageProvider: explicitProvider ?? explicitChannel,
+    };
+  }
+}
+
 function resolveToggleStatePath(api: OpenClawPluginApi): string {
   return path.join(
     api.runtime.state.resolveStateDir(),
@@ -1177,6 +1236,8 @@ async function runRecallSubagent(params: {
   agentId: string;
   sessionKey?: string;
   sessionId?: string;
+  messageProvider?: string;
+  channelId?: string;
   query: string;
   currentModelProviderId?: string;
   currentModelId?: string;
@@ -1228,12 +1289,22 @@ async function runRecallSubagent(params: {
     config: params.config,
     query: params.query,
   });
+  const { messageChannel, messageProvider } = resolveRecallRunChannelContext({
+    api: params.api,
+    agentId: params.agentId,
+    sessionKey: parentSessionKey,
+    sessionId: params.sessionId,
+    messageProvider: params.messageProvider,
+    channelId: params.channelId,
+  });
 
   try {
     const result = await params.api.runtime.agent.runEmbeddedPiAgent({
       sessionId: subagentSessionId,
       sessionKey: subagentSessionKey,
       agentId: params.agentId,
+      messageChannel,
+      messageProvider,
       sessionFile,
       workspaceDir,
       agentDir,
@@ -1275,6 +1346,8 @@ async function maybeResolveActiveRecall(params: {
   agentId: string;
   sessionKey?: string;
   sessionId?: string;
+  messageProvider?: string;
+  channelId?: string;
   query: string;
   currentModelProviderId?: string;
   currentModelId?: string;
@@ -1539,6 +1612,8 @@ export default definePluginEntry({
         agentId: effectiveAgentId,
         sessionKey: resolvedSessionKey,
         sessionId: ctx.sessionId,
+        messageProvider: ctx.messageProvider,
+        channelId: ctx.channelId,
         query,
         currentModelProviderId: ctx.modelProviderId,
         currentModelId: ctx.modelId,
