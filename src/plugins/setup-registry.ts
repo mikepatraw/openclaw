@@ -630,8 +630,7 @@ export function resolvePluginSetupCliBackend(params: {
   try {
     const result = resolved.register(api);
     if (result && typeof result.then === "function") {
-      setCachedSetupValue(setupCliBackendCache, cacheKey, null);
-      return undefined;
+      // Keep setup registration sync-only.
     }
   } catch {
     setCachedSetupValue(setupCliBackendCache, cacheKey, null);
