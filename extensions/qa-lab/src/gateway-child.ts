@@ -960,46 +960,12 @@ export async function startQaGatewayChild(params: {
     });
     return params.mutateConfig ? params.mutateConfig(cfg) : cfg;
   };
-  const allowedPluginIds = [...(buildGatewayConfig(0).plugins?.allow ?? []), "openai"].filter(
-    (pluginId, index, array): pluginId is string => {
-      return (
-        typeof pluginId === "string" && pluginId.length > 0 && array.indexOf(pluginId) === index
-      );
-    },
-  );
-  const bundledPluginsSourceRoot = resolveQaBundledPluginsSourceRoot(params.repoRoot);
-  const { bundledPluginsDir, stagedRoot: stagedBundledPluginsRoot } =
-    await createQaBundledPluginsDir({
-      repoRoot: params.repoRoot,
-      tempRoot,
-      allowedPluginIds,
-    });
-  const runtimeHostVersion = await resolveQaRuntimeHostVersion({
-    repoRoot: params.repoRoot,
-    bundledPluginsSourceRoot,
-    allowedPluginIds,
-  });
-
   const stdout: Buffer[] = [];
   const stderr: Buffer[] = [];
   const stdoutLogPath = path.join(tempRoot, "gateway.stdout.log");
   const stderrLogPath = path.join(tempRoot, "gateway.stderr.log");
   const stdoutLog = createWriteStream(stdoutLogPath, { flags: "a" });
   const stderrLog = createWriteStream(stderrLogPath, { flags: "a" });
-  const env = buildQaRuntimeEnv({
-    configPath,
-    gatewayToken,
-    homeDir,
-    stateDir,
-    xdgConfigHome,
-    xdgDataHome,
-    xdgCacheHome,
-    bundledPluginsDir,
-    compatibilityHostVersion: runtimeHostVersion,
-    providerMode: params.providerMode,
-    forwardHostHomeForClaudeCli: liveProviderIds.includes("claude-cli"),
-    claudeCliAuthMode: params.claudeCliAuthMode,
-  });
 
   const logs = () =>
     `${Buffer.concat(stdout).toString("utf8")}\n${Buffer.concat(stderr).toString("utf8")}`.trim();
@@ -1010,6 +976,8 @@ export async function startQaGatewayChild(params: {
   let child: ReturnType<typeof spawn> | null = null;
   let cfg: ReturnType<typeof buildQaGatewayConfig> | null = null;
   let rpcClient: Awaited<ReturnType<typeof startQaGatewayRpcClient>> | null = null;
+  let stagedBundledPluginsRoot: string | null = null;
+  let env: NodeJS.ProcessEnv | null = null;
 
   try {
     for (let attempt = 1; attempt <= QA_GATEWAY_CHILD_STARTUP_MAX_ATTEMPTS; attempt += 1) {
@@ -1017,10 +985,50 @@ export async function startQaGatewayChild(params: {
       baseUrl = `http://127.0.0.1:${gatewayPort}`;
       wsUrl = `ws://127.0.0.1:${gatewayPort}`;
       cfg = await buildStagedGatewayConfig(gatewayPort);
+      if (!env) {
+        const allowedPluginIds = [...(cfg.plugins?.allow ?? []), "openai"].filter(
+          (pluginId, index, array): pluginId is string => {
+            return (
+              typeof pluginId === "string" &&
+              pluginId.length > 0 &&
+              array.indexOf(pluginId) === index
+            );
+          },
+        );
+        const bundledPluginsSourceRoot = resolveQaBundledPluginsSourceRoot(params.repoRoot);
+        const { bundledPluginsDir, stagedRoot } = await createQaBundledPluginsDir({
+          repoRoot: params.repoRoot,
+          tempRoot,
+          allowedPluginIds,
+        });
+        stagedBundledPluginsRoot = stagedRoot;
+        const runtimeHostVersion = await resolveQaRuntimeHostVersion({
+          repoRoot: params.repoRoot,
+          bundledPluginsSourceRoot,
+          allowedPluginIds,
+        });
+        env = buildQaRuntimeEnv({
+          configPath,
+          gatewayToken,
+          homeDir,
+          stateDir,
+          xdgConfigHome,
+          xdgDataHome,
+          xdgCacheHome,
+          bundledPluginsDir,
+          compatibilityHostVersion: runtimeHostVersion,
+          providerMode: params.providerMode,
+          forwardHostHomeForClaudeCli: liveProviderIds.includes("claude-cli"),
+          claudeCliAuthMode: params.claudeCliAuthMode,
+        });
+      }
       await fs.writeFile(configPath, `${JSON.stringify(cfg, null, 2)}\n`, {
         encoding: "utf8",
         mode: 0o600,
       });
+      if (!env) {
+        throw new Error("qa gateway runtime env not initialized");
+      }
 
       const attemptChild = spawn(
         process.execPath,
@@ -1117,11 +1125,12 @@ export async function startQaGatewayChild(params: {
       }
     }
 
-    if (!child || !cfg || !baseUrl || !wsUrl || !rpcClient) {
+    if (!child || !cfg || !baseUrl || !wsUrl || !rpcClient || !env) {
       throw new Error("qa gateway child failed to start");
     }
     const runningChild = child;
     const runningRpcClient = rpcClient;
+    const runningEnv = env;
 
     return {
       cfg,
@@ -1132,7 +1141,7 @@ export async function startQaGatewayChild(params: {
       workspaceDir,
       tempRoot,
       configPath,
-      runtimeEnv: env,
+      runtimeEnv: runningEnv,
       logs,
       async restart(signal: NodeJS.Signals = "SIGUSR1") {
         if (!runningChild.pid) {

@@ -85,7 +85,7 @@ describe("qa suite failure reply handling", () => {
 
     await expect(
       runQaSuite({
-        transportId: "qa-nope",
+        transportId: "qa-nope" as unknown as "qa-channel",
         startLab,
       }),
     ).rejects.toThrow("unsupported QA transport: qa-nope");
