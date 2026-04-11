@@ -346,6 +346,53 @@ describe("buildQaRuntimeEnv", () => {
 
     expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
   });
+
+  it("treats bind collisions as retryable gateway startup errors", () => {
+    expect(
+      __testing.isRetryableGatewayStartupError(
+        "another gateway instance is already listening on ws://127.0.0.1:43124",
+      ),
+    ).toBe(true);
+    expect(
+      __testing.isRetryableGatewayStartupError(
+        "failed to bind gateway socket on ws://127.0.0.1:43124: Error: listen EADDRINUSE",
+      ),
+    ).toBe(true);
+    expect(__testing.isRetryableGatewayStartupError("gateway failed to become healthy")).toBe(
+      false,
+    );
+  });
+
+  it("probes gateway health with a one-shot HEAD request through the SSRF guard", async () => {
+    const release = vi.fn(async () => {});
+    fetchWithSsrFGuardMock.mockResolvedValue({
+      response: { ok: true },
+      release,
+    });
+
+    await expect(
+      __testing.fetchLocalGatewayHealth({
+        baseUrl: "http://127.0.0.1:43124",
+        healthPath: "/readyz",
+      }),
+    ).resolves.toBe(true);
+
+    expect(fetchWithSsrFGuardMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "http://127.0.0.1:43124/readyz",
+        init: expect.objectContaining({
+          method: "HEAD",
+          headers: {
+            connection: "close",
+          },
+          signal: expect.any(AbortSignal),
+        }),
+        policy: { allowPrivateNetwork: true },
+        auditContext: "qa-lab-gateway-child-health",
+      }),
+    );
+    expect(release).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("resolveQaControlUiRoot", () => {

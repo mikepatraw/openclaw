@@ -254,4 +254,56 @@ describe("qa suite failure reply handling", () => {
 
     await expect(pending).rejects.toThrow('No API key found for provider "openai".');
   });
+
+  it("reads transport transcripts with generic helper names", () => {
+    const state = createQaBusState();
+    state.addInboundMessage({
+      conversation: { id: "qa-operator", kind: "direct" },
+      senderId: "alice",
+      senderName: "Alice",
+      text: "hello",
+    });
+    state.addOutboundMessage({
+      to: "dm:qa-operator",
+      text: "working on it",
+      senderId: "openclaw",
+      senderName: "OpenClaw QA",
+    });
+    state.addOutboundMessage({
+      to: "dm:qa-operator",
+      text: "done",
+      senderId: "openclaw",
+      senderName: "OpenClaw QA",
+    });
+
+    const messages = qaSuiteTesting.readTransportTranscript(state, {
+      conversationId: "qa-operator",
+      direction: "outbound",
+    });
+    const formatted = qaSuiteTesting.formatTransportTranscript(state, {
+      conversationId: "qa-operator",
+    });
+
+    expect(messages.map((message) => message.text)).toEqual(["working on it", "done"]);
+    expect(formatted).toContain("USER Alice: hello");
+    expect(formatted).toContain("ASSISTANT OpenClaw QA: working on it");
+  });
+
+  it("waits for outbound replies through the generic transport alias", async () => {
+    const state = createQaBusState();
+    const pending = qaSuiteTesting.waitForTransportOutboundMessage(
+      state,
+      (candidate) => candidate.conversation.id === "qa-operator" && candidate.text.includes("done"),
+      5_000,
+    );
+
+    state.addOutboundMessage({
+      to: "dm:qa-operator",
+      text: "done",
+      senderId: "openclaw",
+      senderName: "OpenClaw QA",
+    });
+
+    await expect(pending).resolves.toMatchObject({ text: "done" });
+  });
 });

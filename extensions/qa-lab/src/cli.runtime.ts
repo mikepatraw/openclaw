@@ -9,6 +9,7 @@ import { runQaManualLane } from "./manual-lane.runtime.js";
 import { startQaMockOpenAiServer } from "./mock-openai-server.js";
 import { runQaMultipass } from "./multipass.runtime.js";
 import { normalizeQaThinkingLevel, type QaThinkingLevel } from "./qa-gateway-config.js";
+import { normalizeQaTransportId } from "./qa-transport-registry.js";
 import {
   defaultQaModelForMode,
   normalizeQaProviderMode,
@@ -207,6 +208,7 @@ export async function runQaLabSelfCheckCommand(opts: { repoRoot?: string; output
 export async function runQaSuiteCommand(opts: {
   repoRoot?: string;
   outputDir?: string;
+  transportId?: string;
   runner?: string;
   providerMode?: QaProviderModeInput;
   primaryModel?: string;
@@ -221,6 +223,7 @@ export async function runQaSuiteCommand(opts: {
   disk?: string;
 }) {
   const repoRoot = path.resolve(opts.repoRoot ?? process.cwd());
+  const transportId = normalizeQaTransportId(opts.transportId);
   const runner = (opts.runner ?? "host").trim().toLowerCase();
   if (runner !== "host" && runner !== "multipass") {
     throw new Error(`--runner must be one of host or multipass, got "${opts.runner}".`);
@@ -243,6 +246,7 @@ export async function runQaSuiteCommand(opts: {
     const result = await runQaMultipass({
       repoRoot,
       outputDir: resolveRepoRelativeOutputDir(repoRoot, opts.outputDir),
+      transportId,
       providerMode,
       primaryModel: opts.primaryModel,
       alternateModel: opts.alternateModel,
@@ -266,6 +270,7 @@ export async function runQaSuiteCommand(opts: {
   const result = await runQaSuiteFromRuntime({
     repoRoot,
     outputDir: resolveRepoRelativeOutputDir(repoRoot, opts.outputDir),
+    transportId,
     providerMode,
     primaryModel: opts.primaryModel,
     alternateModel: opts.alternateModel,
@@ -321,6 +326,7 @@ export async function runQaCharacterEvalCommand(opts: {
 
 export async function runQaManualLaneCommand(opts: {
   repoRoot?: string;
+  transportId?: string;
   providerMode?: QaProviderModeInput;
   primaryModel?: string;
   alternateModel?: string;
@@ -329,6 +335,7 @@ export async function runQaManualLaneCommand(opts: {
   timeoutMs?: number;
 }) {
   const repoRoot = path.resolve(opts.repoRoot ?? process.cwd());
+  const transportId = normalizeQaTransportId(opts.transportId);
   const providerMode: QaProviderMode =
     opts.providerMode === undefined ? "live-frontier" : normalizeQaProviderMode(opts.providerMode);
   const models = resolveQaManualLaneModels({
@@ -338,6 +345,7 @@ export async function runQaManualLaneCommand(opts: {
   });
   const result = await runQaManualLane({
     repoRoot,
+    transportId,
     providerMode,
     primaryModel: models.primaryModel,
     alternateModel: models.alternateModel,

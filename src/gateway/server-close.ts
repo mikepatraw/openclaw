@@ -12,6 +12,8 @@ import { normalizeOptionalString } from "../shared/string-coerce.js";
 const shutdownLog = createSubsystemLogger("gateway/shutdown");
 const WEBSOCKET_CLOSE_GRACE_MS = 1_000;
 const WEBSOCKET_CLOSE_FORCE_CONTINUE_MS = 250;
+const HTTP_CLOSE_GRACE_MS = 1_000;
+const HTTP_CLOSE_FORCE_WAIT_MS = 5_000;
 
 export async function runGatewayClosePrelude(params: {
   stopDiagnostics?: () => void;
@@ -203,14 +205,36 @@ export function createGatewayCloseHandler(params: {
           : [params.httpServer];
       for (const server of servers) {
         const httpServer = server as HttpServer & {
+          closeAllConnections?: () => void;
           closeIdleConnections?: () => void;
         };
         if (typeof httpServer.closeIdleConnections === "function") {
           httpServer.closeIdleConnections();
         }
-        await new Promise<void>((resolve, reject) =>
+        const closePromise = new Promise<void>((resolve, reject) =>
           httpServer.close((err) => (err ? reject(err) : resolve())),
         );
+        const closedWithinGrace = await Promise.race([
+          closePromise.then(() => true),
+          new Promise<false>((resolve) => setTimeout(() => resolve(false), HTTP_CLOSE_GRACE_MS)),
+        ]);
+        if (!closedWithinGrace) {
+          shutdownLog.warn(
+            `http server close exceeded ${HTTP_CLOSE_GRACE_MS}ms; forcing connection shutdown and waiting for close`,
+          );
+          httpServer.closeAllConnections?.();
+          const closedAfterForce = await Promise.race([
+            closePromise.then(() => true),
+            new Promise<false>((resolve) =>
+              setTimeout(() => resolve(false), HTTP_CLOSE_FORCE_WAIT_MS),
+            ),
+          ]);
+          if (!closedAfterForce) {
+            throw new Error(
+              `http server close still pending after forced connection shutdown (${HTTP_CLOSE_FORCE_WAIT_MS}ms)`,
+            );
+          }
+        }
       }
     } finally {
       try {
