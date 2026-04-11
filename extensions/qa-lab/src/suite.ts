@@ -15,7 +15,7 @@ import {
 import { buildAgentSessionKey } from "openclaw/plugin-sdk/routing";
 import { fetchWithSsrFGuard } from "openclaw/plugin-sdk/ssrf-runtime";
 import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
-import { assertRepoBoundPath, resolveRepoRelativeOutputDir } from "./cli-paths.js";
+import { ensureRepoBoundDirectory, resolveRepoRelativeOutputDir } from "./cli-paths.js";
 import { waitForCronRunCompletion } from "./cron-run-wait.js";
 import {
   hasDiscoveryLabels,
@@ -40,7 +40,11 @@ import {
 } from "./model-selection.js";
 import { hasModelSwitchContinuityEvidence } from "./model-switch-eval.js";
 import type { QaThinkingLevel } from "./qa-gateway-config.js";
-import { createQaTransportAdapter, type QaTransportId } from "./qa-transport-registry.js";
+import {
+  createQaTransportAdapter,
+  normalizeQaTransportId,
+  type QaTransportId,
+} from "./qa-transport-registry.js";
 import type {
   QaTransportAdapter,
   QaTransportActionName,
@@ -262,17 +266,21 @@ function liveTurnTimeoutMs(env: QaSuiteEnvironment, fallbackMs: number) {
 }
 
 async function resolveQaSuiteOutputDir(repoRoot: string, outputDir?: string) {
-  if (!outputDir) {
-    return path.join(repoRoot, ".artifacts", "qa-e2e", `suite-${Date.now().toString(36)}`);
-  }
-  if (!path.isAbsolute(outputDir)) {
-    const resolved = resolveRepoRelativeOutputDir(repoRoot, outputDir);
+  const targetDir = !outputDir
+    ? path.join(repoRoot, ".artifacts", "qa-e2e", `suite-${Date.now().toString(36)}`)
+    : outputDir;
+  if (!path.isAbsolute(targetDir)) {
+    const resolved = resolveRepoRelativeOutputDir(repoRoot, targetDir);
     if (!resolved) {
       throw new Error("QA suite outputDir must be set.");
     }
-    return await assertRepoBoundPath(repoRoot, resolved, "QA suite outputDir");
+    return await ensureRepoBoundDirectory(repoRoot, resolved, "QA suite outputDir", {
+      mode: 0o700,
+    });
   }
-  return await assertRepoBoundPath(repoRoot, outputDir, "QA suite outputDir");
+  return await ensureRepoBoundDirectory(repoRoot, targetDir, "QA suite outputDir", {
+    mode: 0o700,
+  });
 }
 
 export type QaSuiteResult = {
@@ -1408,7 +1416,7 @@ export async function runQaSuite(params?: QaSuiteRunParams): Promise<QaSuiteResu
   const startedAt = new Date();
   const repoRoot = path.resolve(params?.repoRoot ?? process.cwd());
   const providerMode = normalizeQaProviderMode(params?.providerMode ?? "mock-openai");
-  const transportId = params?.transportId ?? "qa-channel";
+  const transportId = normalizeQaTransportId(params?.transportId);
   const primaryModel = params?.primaryModel ?? defaultQaModelForMode(providerMode);
   const alternateModel =
     params?.alternateModel ?? defaultQaModelForMode(providerMode, { alternate: true });
@@ -1417,7 +1425,6 @@ export async function runQaSuite(params?: QaSuiteRunParams): Promise<QaSuiteResu
       ? params.fastMode
       : isQaFastModeEnabled({ primaryModel, alternateModel });
   const outputDir = await resolveQaSuiteOutputDir(repoRoot, params?.outputDir);
-  await fs.mkdir(outputDir, { recursive: true });
   const catalog = readQaBootstrapScenarioCatalog();
   const selectedCatalogScenarios = selectQaSuiteScenarios({
     scenarios: catalog.scenarios,

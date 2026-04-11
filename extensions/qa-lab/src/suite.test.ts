@@ -1,9 +1,9 @@
-import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createQaBusState } from "./bus-state.js";
-import { qaSuiteTesting } from "./suite.js";
+import { qaSuiteTesting, runQaSuite } from "./suite.js";
 
 describe("qa suite failure reply handling", () => {
   const makeScenario = (
@@ -52,6 +52,11 @@ describe("qa suite failure reply handling", () => {
         ),
       ).resolves.toBe(path.join(repoRoot, ".artifacts", "qa-e2e", "custom"));
       await expect(
+        lstat(path.join(repoRoot, ".artifacts", "qa-e2e", "custom")).then((stats) =>
+          stats.isDirectory(),
+        ),
+      ).resolves.toBe(true);
+      await expect(
         qaSuiteTesting.resolveQaSuiteOutputDir(repoRoot, "/tmp/outside"),
       ).rejects.toThrow("QA suite outputDir must stay within the repo root.");
     } finally {
@@ -73,6 +78,19 @@ describe("qa suite failure reply handling", () => {
       await rm(repoRoot, { recursive: true, force: true });
       await rm(outsideRoot, { recursive: true, force: true });
     }
+  });
+
+  it("rejects unsupported transport ids before starting the lab", async () => {
+    const startLab = vi.fn();
+
+    await expect(
+      runQaSuite({
+        transportId: "qa-nope",
+        startLab,
+      }),
+    ).rejects.toThrow("unsupported QA transport: qa-nope");
+
+    expect(startLab).not.toHaveBeenCalled();
   });
 
   it("maps suite work with bounded concurrency while preserving order", async () => {

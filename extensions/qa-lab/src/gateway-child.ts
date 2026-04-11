@@ -16,7 +16,7 @@ import {
 import type { ModelProviderConfig } from "openclaw/plugin-sdk/provider-model-shared";
 import { fetchWithSsrFGuard } from "openclaw/plugin-sdk/ssrf-runtime";
 import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
-import { assertRepoBoundPath } from "./cli-paths.js";
+import { assertRepoBoundPath, ensureRepoBoundDirectory } from "./cli-paths.js";
 import { formatQaGatewayLogsForError, redactQaGatewayDebugText } from "./gateway-log-redaction.js";
 import { startQaGatewayRpcClient } from "./gateway-rpc-client.js";
 import { splitQaModelRef } from "./model-selection.js";
@@ -122,6 +122,12 @@ async function assertQaArtifactDirWithinRepo(repoRoot: string, artifactDir: stri
   return await assertRepoBoundPath(repoRoot, artifactDir, "QA gateway artifact directory");
 }
 
+async function clearQaGatewayArtifactDir(dir: string) {
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    await fs.rm(path.join(dir, entry.name), { recursive: true, force: true });
+  }
+}
+
 async function cleanupQaGatewayTempRoots(params: {
   tempRoot: string;
   stagedBundledPluginsRoot?: string | null;
@@ -140,10 +146,17 @@ async function preserveQaGatewayDebugArtifacts(params: {
   repoRoot?: string;
 }) {
   const preserveToDir = params.repoRoot
-    ? await assertQaArtifactDirWithinRepo(params.repoRoot, params.preserveToDir)
+    ? await ensureRepoBoundDirectory(
+        params.repoRoot,
+        params.preserveToDir,
+        "QA gateway artifact directory",
+        {
+          mode: 0o700,
+        },
+      )
     : params.preserveToDir;
-  await fs.rm(preserveToDir, { recursive: true, force: true });
   await fs.mkdir(preserveToDir, { recursive: true, mode: 0o700 });
+  await clearQaGatewayArtifactDir(preserveToDir);
   await Promise.all([
     writeSanitizedQaGatewayDebugLog({
       sourcePath: params.stdoutLogPath,
@@ -914,8 +927,8 @@ export async function startQaGatewayChild(params: {
           providerConfigs: liveProviderConfigs,
         })
       : undefined;
-  const buildStagedGatewayConfig = async (gatewayPort: number) => {
-    let cfg = buildQaGatewayConfig({
+  const buildGatewayConfig = (gatewayPort: number) =>
+    buildQaGatewayConfig({
       bind: "loopback",
       gatewayPort,
       gatewayToken,
@@ -939,14 +952,15 @@ export async function startQaGatewayChild(params: {
       thinkingDefault: params.thinkingDefault,
       controlUiEnabled: params.controlUiEnabled,
     });
+  const buildStagedGatewayConfig = async (gatewayPort: number) => {
+    let cfg = buildGatewayConfig(gatewayPort);
     cfg = await stageQaLiveAnthropicSetupToken({
       cfg,
       stateDir,
     });
     return params.mutateConfig ? params.mutateConfig(cfg) : cfg;
   };
-  const initialCfg = await buildStagedGatewayConfig(1);
-  const allowedPluginIds = [...(initialCfg.plugins?.allow ?? []), "openai"].filter(
+  const allowedPluginIds = [...(buildGatewayConfig(0).plugins?.allow ?? []), "openai"].filter(
     (pluginId, index, array): pluginId is string => {
       return (
         typeof pluginId === "string" && pluginId.length > 0 && array.indexOf(pluginId) === index
@@ -1023,6 +1037,7 @@ export async function startQaGatewayChild(params: {
         {
           cwd: runtimeCwd,
           env,
+          detached: process.platform !== "win32",
           stdio: ["ignore", "pipe", "pipe"],
         },
       );
