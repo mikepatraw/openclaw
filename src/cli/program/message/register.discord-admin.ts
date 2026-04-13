@@ -70,9 +70,6 @@ export function registerMessageDiscordAdminCommands(message: Command, helpers: M
     .option("--topic <text>", "Channel topic")
     .option("--position <n>", "Channel position")
     .option("--nsfw", "Mark channel as NSFW", false)
-    .option("--rate-limit-per-user <n>", "Slowmode seconds")
-    .option("--bitrate <n>", "Voice bitrate")
-    .option("--user-limit <n>", "Voice user limit")
     .action(async (opts) => {
       await helpers.runMessageAction("channel-create", opts);
     });
@@ -90,8 +87,6 @@ export function registerMessageDiscordAdminCommands(message: Command, helpers: M
     .option("--position <n>", "Channel position")
     .option("--nsfw", "Mark channel as NSFW")
     .option("--rate-limit-per-user <n>", "Slowmode seconds")
-    .option("--bitrate <n>", "Voice bitrate")
-    .option("--user-limit <n>", "Voice user limit")
     .action(async (opts) => {
       await helpers.runMessageAction("channel-edit", opts);
     });
