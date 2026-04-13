@@ -52,32 +52,46 @@ describe("registerMessageDiscordAdminCommands", () => {
     );
   });
 
-  it("registers channel edit/delete/move actions", async () => {
+  it("registers channel edit and routes args to channel-edit", async () => {
     const message = new Command().exitOverride();
     registerMessageDiscordAdminCommands(message, createHelpers(runMessageAction));
 
     await message.parseAsync(["channel", "edit", "--channel-id", "123", "--name", "renamed"], {
       from: "user",
     });
-    await message.parseAsync(["channel", "delete", "--channel-id", "123"], { from: "user" });
-    await message.parseAsync(["channel", "move", "--channel-id", "123", "--position", "4"], {
-      from: "user",
-    });
 
-    expect(runMessageAction).toHaveBeenNthCalledWith(
-      1,
+    expect(runMessageAction).toHaveBeenCalledWith(
       "channel-edit",
       expect.objectContaining({ channelId: "123", name: "renamed" }),
     );
-    expect(runMessageAction).toHaveBeenNthCalledWith(
-      2,
+  });
+
+  it("registers channel delete and routes args to channel-delete", async () => {
+    const message = new Command().exitOverride();
+    registerMessageDiscordAdminCommands(message, createHelpers(runMessageAction));
+
+    await message.parseAsync(["channel", "delete", "--channel-id", "123"], { from: "user" });
+
+    expect(runMessageAction).toHaveBeenCalledWith(
       "channel-delete",
       expect.objectContaining({ channelId: "123" }),
     );
-    expect(runMessageAction).toHaveBeenNthCalledWith(
-      3,
+  });
+
+  it("registers channel move and routes args to channel-move", async () => {
+    const message = new Command().exitOverride();
+    registerMessageDiscordAdminCommands(message, createHelpers(runMessageAction));
+
+    await message.parseAsync(
+      ["channel", "move", "--guild-id", "guild-1", "--channel-id", "123", "--position", "4"],
+      {
+        from: "user",
+      },
+    );
+
+    expect(runMessageAction).toHaveBeenCalledWith(
       "channel-move",
-      expect.objectContaining({ channelId: "123", position: "4" }),
+      expect.objectContaining({ guildId: "guild-1", channelId: "123", position: "4" }),
     );
   });
 });

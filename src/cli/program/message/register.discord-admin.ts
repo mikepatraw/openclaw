@@ -112,6 +112,7 @@ export function registerMessageDiscordAdminCommands(message: Command, helpers: M
       channel
         .command("move")
         .description("Move a channel")
+        .requiredOption("--guild-id <id>", "Guild id")
         .requiredOption("--channel-id <id>", "Channel id")
         .requiredOption("--position <n>", "New channel position"),
     )
