@@ -321,12 +321,13 @@ func (ri *routeIndex) localizeURL(raw string) string {
 }
 
 func hasURLScheme(raw string) bool {
+	lowerRaw := strings.ToLower(raw)
 	switch {
-	case strings.HasPrefix(raw, "http://"), strings.HasPrefix(raw, "https://"):
+	case strings.HasPrefix(lowerRaw, "http://"), strings.HasPrefix(lowerRaw, "https://"):
 		return true
-	case strings.HasPrefix(raw, "mailto:"), strings.HasPrefix(raw, "tel:"):
+	case strings.HasPrefix(lowerRaw, "mailto:"), strings.HasPrefix(lowerRaw, "tel:"):
 		return true
-	case strings.HasPrefix(raw, "data:"), strings.HasPrefix(raw, "javascript:"):
+	case strings.HasPrefix(lowerRaw, "data:"), strings.HasPrefix(lowerRaw, "javascript:"), strings.HasPrefix(lowerRaw, "vbscript:"):
 		return true
 	default:
 		return false
