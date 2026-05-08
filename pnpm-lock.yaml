@@ -236,8 +236,8 @@ importers:
         specifier: 8.0.2
         version: 8.0.2
       uuid:
-        specifier: ^13.0.1
-        version: 13.0.1
+        specifier: ^14.0.0
+        version: 14.0.0
       ws:
         specifier: ^8.20.0
         version: 8.20.0
@@ -611,7 +611,7 @@ importers:
     dependencies:
       '@google/genai':
         specifier: ^1.49.0
-        version: 1.49.0(@modelcontextprotocol/sdk@1.29.0(zod@4.3.6))
+        version: 1.49.0(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))
     devDependencies:
       '@openclaw/plugin-sdk':
         specifier: workspace:*
@@ -782,7 +782,7 @@ importers:
         version: 0.34.49
       openai:
         specifier: ^6.34.0
-        version: 6.34.0(ws@8.20.0)(zod@4.3.6)
+        version: 6.34.0(ws@8.20.0)(zod@4.4.3)
     devDependencies:
       '@openclaw/plugin-sdk':
         specifier: workspace:*
@@ -1285,7 +1285,7 @@ importers:
     devDependencies:
       '@vitest/browser-playwright':
         specifier: 4.1.4
-        version: 4.1.4(playwright@1.59.1)(vite@8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)
+        version: 4.1.4(playwright@1.59.1)(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)
       jsdom:
         specifier: ^29.0.2
         version: 29.0.2(@noble/hashes@2.0.1)
@@ -1294,10 +1294,10 @@ importers:
         version: 1.59.1
       vite:
         specifier: 8.0.8
-        version: 8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
       vitest:
         specifier: 4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/browser-playwright@4.1.4)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(@vitest/browser-playwright@4.1.4)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
 packages:
 
@@ -2499,20 +2499,24 @@ packages:
   '@mariozechner/pi-agent-core@0.66.1':
     resolution: {integrity: sha512-Nj54A7SuB/EQi8r3Gs+glFOr9wz/a9uxYFf0pCLf2DE7VmzA9O7WSejrvArna17K6auftLSdNyRRe2bIO0qezg==}
     engines: {node: '>=20.0.0'}
+    deprecated: please use @earendil-works/pi-agent-core instead going forward
 
   '@mariozechner/pi-ai@0.66.1':
     resolution: {integrity: sha512-7IZHvpsFdKEBkTmjNrdVL7JLUJVIpha6bwTr12cZ5XyDrxij06wP6Ncpnf4HT5BXAzD5w2JnoqTOSbMEIZj3dg==}
     engines: {node: '>=20.0.0'}
+    deprecated: please use @earendil-works/pi-ai instead going forward
     hasBin: true
 
   '@mariozechner/pi-coding-agent@0.66.1':
     resolution: {integrity: sha512-cNmatT+5HvYzQ78cRhRih00wCeUTH/fFx9ecJh5AbN7axgWU+bwiZYy0cjrTsGVgMGF4xMYlPRn/Nze9JEB+/w==}
     engines: {node: '>=20.6.0'}
+    deprecated: please use @earendil-works/pi-coding-agent instead going forward
     hasBin: true
 
   '@mariozechner/pi-tui@0.66.1':
     resolution: {integrity: sha512-hNFN42ebjwtfGooqoUwM+QaPR1XCyqPuueuP3aLOWS1bZ2nZP/jq8MBuGNrmMw1cgiDcotvOlSNj3BatzEOGsw==}
     engines: {node: '>=20.0.0'}
+    deprecated: please use @earendil-works/pi-tui instead going forward
 
   '@matrix-org/matrix-sdk-crypto-nodejs@0.4.0':
     resolution: {integrity: sha512-+qqgpn39XFSbsD0dFjssGO9vHEP7sTyfs8yTpt8vuqWpUpF20QMwpCZi0jpYw7GxjErNTsMshopuo8677DfGEA==}
@@ -4116,11 +4120,17 @@ packages:
   '@types/node@20.19.39':
     resolution: {integrity: sha512-orrrD74MBUyK8jOAD/r0+lfa1I2MO6I+vAkmAWzMYbCcgrN4lCrmK52gRFQq/JRxfYPfonkr4b0jcY7Olqdqbw==}
 
+  '@types/node@20.19.40':
+    resolution: {integrity: sha512-xxx6M2IpSTnnKcR0cMvIiohkiCx20/oRPtWGbenFygKCGl3zqUzdNjQ/1V4solq1LU+dgv0nQzeGOuqkqZGg0Q==}
+
   '@types/node@24.12.2':
     resolution: {integrity: sha512-A1sre26ke7HDIuY/M23nd9gfB+nrmhtYyMINbjI1zHJxYteKR6qSMX56FsmjMcDb3SMcjJg5BiRRgOCC/yBD0g==}
 
   '@types/node@25.6.0':
     resolution: {integrity: sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==}
+
+  '@types/node@25.6.2':
+    resolution: {integrity: sha512-sokuT28dxf9JT5Kady1fsXOvI4HVpjZa95NKT5y9PNTIrs2AsobR4GFAA90ZG8M+nxVRLysCXsVj6eGC7Vbrlw==}
 
   '@types/qrcode-terminal@0.12.2':
     resolution: {integrity: sha512-v+RcIEJ+Uhd6ygSQ0u5YYY7ZM+la7GgPbs0V/7l/kFs2uO4S8BcIUEMoP7za4DNIqNnUD5npf0A/7kBhrCKG5Q==}
@@ -4200,6 +4210,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@urbit/aura@3.0.0':
     resolution: {integrity: sha512-N8/FHc/lmlMDCumMuTXyRHCxlov5KZY6unmJ9QR2GOw+OpROZMBsXYGwE+ZMtvN21ql9+Xb8KhGNBj08IrG3Wg==}
@@ -6417,8 +6428,8 @@ packages:
     resolution: {integrity: sha512-CvexbZtbov6jW2eXAvLukXjXUW1TzFaivC46BpWc/3BpcCysb5Vffu+B3XHMm8lVEuy2Mm4XGex8hBSg1yapPg==}
     engines: {node: '>=12.0.0'}
 
-  protobufjs@7.5.5:
-    resolution: {integrity: sha512-3wY1AxV+VBNW8Yypfd1yQY9pXnqTAN+KwQxL8iYm3/BjKYMNg4i0owhEe26PWDOMaIrzeeF98Lqd5NGz4omiIg==}
+  protobufjs@7.5.6:
+    resolution: {integrity: sha512-M71sTMB146U3u0di3yup8iM+zv8yPRNQVr1KK4tyBitl3qFvEGucq/rGDRShD2rsJhtN02RJaJ7j5X5hmy8SJg==}
     engines: {node: '>=12.0.0'}
 
   proxy-addr@2.0.7:
@@ -7198,6 +7209,10 @@ packages:
     resolution: {integrity: sha512-9ezox2roIft6ExBVTVqibSd5dc5/47Sw/uY6b4SjQUT2TzQ0tltNquWA46y4xPQmdZYqvnio22SgWd41M86+jw==}
     hasBin: true
 
+  uuid@14.0.0:
+    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
+    hasBin: true
+
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
     deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
@@ -7460,6 +7475,9 @@ packages:
 
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -8632,6 +8650,19 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@google/genai@1.49.0(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))':
+    dependencies:
+      google-auth-library: 10.6.2
+      p-retry: 4.6.2
+      protobufjs: 7.5.4
+      ws: 8.20.0
+    optionalDependencies:
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   '@grammyjs/runner@2.0.3(grammy@1.42.0)':
     dependencies:
       abort-controller: 3.0.0
@@ -8653,7 +8684,7 @@ snapshots:
     dependencies:
       lodash.camelcase: 4.3.0
       long: 5.3.2
-      protobufjs: 7.5.5
+      protobufjs: 7.5.6
       yargs: 17.7.2
 
   '@hapi/boom@9.1.4':
@@ -9368,6 +9399,29 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@4.3.6)
     transitivePeerDependencies:
       - supports-color
+
+  '@modelcontextprotocol/sdk@1.29.0(zod@4.4.3)':
+    dependencies:
+      '@hono/node-server': 1.19.13(hono@4.12.12)
+      ajv: 8.18.0
+      ajv-formats: 3.0.1(ajv@8.18.0)
+      content-type: 1.0.5
+      cors: 2.8.6
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.0.6
+      express: 5.2.1
+      express-rate-limit: 8.3.2(express@5.2.1)
+      hono: 4.12.12
+      jose: 6.2.2
+      json-schema-typed: 8.0.2
+      pkce-challenge: 5.0.1
+      raw-body: 3.0.2
+      zod: 4.4.3
+      zod-to-json-schema: 3.25.2(zod@4.4.3)
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
 
   '@mozilla/readability@0.6.0': {}
 
@@ -10808,6 +10862,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/node@20.19.40':
+    dependencies:
+      undici-types: 6.21.0
+
   '@types/node@24.12.2':
     dependencies:
       undici-types: 7.16.0
@@ -10815,6 +10873,11 @@ snapshots:
   '@types/node@25.6.0':
     dependencies:
       undici-types: 7.19.2
+
+  '@types/node@25.6.2':
+    dependencies:
+      undici-types: 7.19.2
+    optional: true
 
   '@types/qrcode-terminal@0.12.2': {}
 
@@ -10903,6 +10966,20 @@ snapshots:
       - msw
       - utf-8-validate
       - vite
+    optional: true
+
+  '@vitest/browser-playwright@4.1.4(playwright@1.59.1)(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)':
+    dependencies:
+      '@vitest/browser': 4.1.4(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)
+      '@vitest/mocker': 4.1.4(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      playwright: 1.59.1
+      tinyrainbow: 3.1.0
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(@vitest/browser-playwright@4.1.4)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+    transitivePeerDependencies:
+      - bufferutil
+      - msw
+      - utf-8-validate
+      - vite
 
   '@vitest/browser@4.1.4(vite@8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)':
     dependencies:
@@ -10914,6 +10991,24 @@ snapshots:
       sirv: 3.0.2
       tinyrainbow: 3.1.0
       vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/browser-playwright@4.1.4)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      ws: 8.20.0
+    transitivePeerDependencies:
+      - bufferutil
+      - msw
+      - utf-8-validate
+      - vite
+    optional: true
+
+  '@vitest/browser@4.1.4(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)':
+    dependencies:
+      '@blazediff/core': 1.9.1
+      '@vitest/mocker': 4.1.4(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/utils': 4.1.4
+      magic-string: 0.30.21
+      pngjs: 7.0.0
+      sirv: 3.0.2
+      tinyrainbow: 3.1.0
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(@vitest/browser-playwright@4.1.4)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
       ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
@@ -10933,9 +11028,9 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/browser-playwright@4.1.4)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(@vitest/browser-playwright@4.1.4)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
     optionalDependencies:
-      '@vitest/browser': 4.1.4(vite@8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)
+      '@vitest/browser': 4.1.4(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)
 
   '@vitest/expect@4.1.4':
     dependencies:
@@ -10953,6 +11048,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+
+  '@vitest/mocker@4.1.4(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))':
+    dependencies:
+      '@vitest/spy': 4.1.4
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
 
   '@vitest/pretty-format@4.1.4':
     dependencies:
@@ -11105,7 +11208,7 @@ snapshots:
       '@swc/helpers': 0.5.21
       '@types/command-line-args': 5.2.3
       '@types/command-line-usage': 5.0.4
-      '@types/node': 20.19.39
+      '@types/node': 20.19.40
       command-line-args: 5.2.1
       command-line-usage: 7.0.4
       flatbuffers: 24.12.23
@@ -13049,6 +13152,11 @@ snapshots:
       ws: 8.20.0
       zod: 4.3.6
 
+  openai@6.34.0(ws@8.20.0)(zod@4.4.3):
+    optionalDependencies:
+      ws: 8.20.0
+      zod: 4.4.3
+
   openshell@0.1.0:
     dependencies:
       dotenv: 16.6.1
@@ -13371,7 +13479,7 @@ snapshots:
       '@types/node': 25.6.0
       long: 5.3.2
 
-  protobufjs@7.5.5:
+  protobufjs@7.5.6:
     dependencies:
       '@protobufjs/aspromise': 1.1.2
       '@protobufjs/base64': 1.1.2
@@ -14289,6 +14397,8 @@ snapshots:
 
   uuid@13.0.1: {}
 
+  uuid@14.0.0: {}
+
   uuid@8.3.2: {}
 
   uuid@9.0.1: {}
@@ -14322,6 +14432,21 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.3
 
+  vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3):
+    dependencies:
+      lightningcss: 1.32.0
+      picomatch: 4.0.4
+      postcss: 8.5.9
+      rolldown: 1.0.0-rc.15
+      tinyglobby: 0.2.16
+    optionalDependencies:
+      '@types/node': 25.6.2
+      esbuild: 0.27.7
+      fsevents: 2.3.3
+      jiti: 2.6.1
+      tsx: 4.21.0
+      yaml: 2.8.3
+
   vitest@4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/browser-playwright@4.1.4)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.4
@@ -14348,6 +14473,37 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@types/node': 25.6.0
       '@vitest/browser-playwright': 4.1.4(playwright@1.59.1)(vite@8.0.8(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)
+      '@vitest/coverage-v8': 4.1.4(@vitest/browser@4.1.4)(vitest@4.1.4)
+      jsdom: 29.0.2(@noble/hashes@2.0.1)
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(@vitest/browser-playwright@4.1.4)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)):
+    dependencies:
+      '@vitest/expect': 4.1.4
+      '@vitest/mocker': 4.1.4(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/pretty-format': 4.1.4
+      '@vitest/runner': 4.1.4
+      '@vitest/snapshot': 4.1.4
+      '@vitest/spy': 4.1.4
+      '@vitest/utils': 4.1.4
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.4
+      std-env: 4.0.0
+      tinybench: 2.9.0
+      tinyexec: 1.1.1
+      tinyglobby: 0.2.16
+      tinyrainbow: 3.1.0
+      vite: 8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.1
+      '@types/node': 25.6.2
+      '@vitest/browser-playwright': 4.1.4(playwright@1.59.1)(vite@8.0.8(@types/node@25.6.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.4)
       '@vitest/coverage-v8': 4.1.4(@vitest/browser@4.1.4)(vitest@4.1.4)
       jsdom: 29.0.2(@noble/hashes@2.0.1)
     transitivePeerDependencies:
@@ -14493,8 +14649,16 @@ snapshots:
     dependencies:
       zod: 4.3.6
 
+  zod-to-json-schema@3.25.2(zod@4.4.3):
+    dependencies:
+      zod: 4.4.3
+    optional: true
+
   zod@3.25.76: {}
 
   zod@4.3.6: {}
+
+  zod@4.4.3:
+    optional: true
 
   zwitch@2.0.4: {}
