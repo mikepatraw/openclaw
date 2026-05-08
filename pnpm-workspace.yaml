@@ -12,6 +12,7 @@ minimumReleaseAgeExclude:
   - "basic-ftp"
   - "hono"
   - "openclaw"
+  - "simple-git@3.36.0"
   - "@buape/carbon"
   - "vite"
   - "@cloudflare/workers-types"
