@@ -1453,7 +1453,7 @@
     "openshell": "0.1.0"
   },
   "overrides": {
-    "axios": "1.15.1"
+    "axios": "1.15.2"
   },
   "engines": {
     "node": ">=22.14.0"
@@ -1464,7 +1464,7 @@
       "@anthropic-ai/sdk": "0.81.0",
       "hono": "4.12.12",
       "@hono/node-server": "1.19.13",
-      "axios": "1.15.1",
+      "axios": "1.15.2",
       "defu": "6.1.5",
       "fast-xml-parser": "5.5.7",
       "request": "npm:@cypress/request@3.0.10",
