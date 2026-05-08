@@ -24,6 +24,7 @@ minimumReleaseAgeExclude:
   - "@oxfmt/*"
   - "axios@1.15.2"
   - "discord-api-types"
+  - "fast-xml-builder@1.1.7"
   - "rolldown"
   - "sqlite-vec"
   - "sqlite-vec-*"
