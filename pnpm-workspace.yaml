@@ -12,6 +12,7 @@ minimumReleaseAgeExclude:
   - "basic-ftp"
   - "hono"
   - "openclaw"
+  - "@anthropic-ai/sdk@0.91.1"
   - "@buape/carbon"
   - "vite"
   - "@cloudflare/workers-types"
